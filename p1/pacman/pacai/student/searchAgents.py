@@ -7,12 +7,16 @@ Good luck and happy searching!
 
 import logging
 
+from pacai.core.distance import manhattan
 from pacai.core.actions import Actions
 from pacai.core.search import heuristic
 from pacai.core.search.position import PositionSearchProblem
 from pacai.core.search.problem import SearchProblem
+from pacai.core.directions import Directions
+
 from pacai.agents.base import BaseAgent
 from pacai.agents.search.base import SearchAgent
+
 
 class CornersProblem(SearchProblem):
     """
@@ -64,7 +68,33 @@ class CornersProblem(SearchProblem):
                 logging.warning('Warning: no food in corner ' + str(corner))
 
         # *** Your Code Here ***
-        raise NotImplementedError()
+        self.start_state = (self.startingPosition, [])
+        # raise NotImplementedError()
+
+    def startingState(self):
+        return self.start_state
+
+    def isGoal(self, state):
+        return len(state[1]) == 4  # If four corners have been visted
+
+    def successorStates(self, state):
+        successors = []
+        curr_pos = state[0]
+        for action in Directions.CARDINAL:
+            x, y = curr_pos
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            hitsWall = self.walls[nextx][nexty]
+
+            if not hitsWall:
+                # Construct the successor.
+                visited_corner = state[1].copy()
+                if (nextx, nexty) in self.corners and (nextx, nexty) not in visited_corner:
+                    visited_corner.append((nextx, nexty))
+                next_state = ((nextx, nexty), visited_corner)
+                successors.append((next_state, action, 1))
+        self._numExpanded += 1
+        return successors
 
     def actionsCost(self, actions):
         """
@@ -85,6 +115,7 @@ class CornersProblem(SearchProblem):
 
         return len(actions)
 
+
 def cornersHeuristic(state, problem):
     """
     A heuristic for the CornersProblem that you defined.
@@ -100,7 +131,30 @@ def cornersHeuristic(state, problem):
     # walls = problem.walls  # These are the walls of the maze, as a Grid.
 
     # *** Your Code Here ***
-    return heuristic.null(state, problem)  # Default to trivial solution
+    corners = problem.corners   # All corners
+    unvisited = []              # Unvisited corners
+    visited = state[1]          # Visited corners
+    curr_pos = state[0]         # Current position
+    heuristic_value = 0         # Heuristic value to return
+
+    unvisited = list(set(corners) - set(visited))   # Get ALL Unvisted Corners
+
+    # Find the shortest manhattan distance from current position to all other unvisted corners
+    while unvisited:
+        min_distance = float('inf')
+        closest_corner = ()
+        for corner in unvisited:
+            temp_distance = manhattan(curr_pos, corner)
+            if temp_distance < min_distance:
+                min_distance = temp_distance
+                closest_corner = corner
+        heuristic_value += min_distance
+        curr_pos = closest_corner
+        unvisited.remove(closest_corner)
+
+    return heuristic_value
+    # return heuristic.null(state, problem)  # Default to trivial solution
+
 
 def foodHeuristic(state, problem):
     """
@@ -136,6 +190,7 @@ def foodHeuristic(state, problem):
     # *** Your Code Here ***
     return heuristic.null(state, problem)  # Default to the null heuristic.
 
+
 class ClosestDotSearchAgent(SearchAgent):
     """
     Search for all food using a sequence of searches.
@@ -151,14 +206,15 @@ class ClosestDotSearchAgent(SearchAgent):
         currentState = state
 
         while (currentState.getFood().count() > 0):
-            nextPathSegment = self.findPathToClosestDot(currentState)  # The missing piece
+            nextPathSegment = self.findPathToClosestDot(
+                currentState)  # The missing piece
             self._actions += nextPathSegment
 
             for action in nextPathSegment:
                 legal = currentState.getLegalActions()
                 if action not in legal:
                     raise Exception('findPathToClosestDot returned an illegal move: %s!\n%s' %
-                            (str(action), str(currentState)))
+                                    (str(action), str(currentState)))
 
                 currentState = currentState.generateSuccessor(0, action)
 
@@ -177,6 +233,7 @@ class ClosestDotSearchAgent(SearchAgent):
 
         # *** Your Code Here ***
         raise NotImplementedError()
+
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
@@ -199,11 +256,12 @@ class AnyFoodSearchProblem(PositionSearchProblem):
     Fill this in with a goal test that will complete the problem definition.
     """
 
-    def __init__(self, gameState, start = None):
-        super().__init__(gameState, goal = None, start = start)
+    def __init__(self, gameState, start=None):
+        super().__init__(gameState, goal=None, start=start)
 
         # Store the food for later reference.
         self.food = gameState.getFood()
+
 
 class ApproximateSearchAgent(BaseAgent):
     """

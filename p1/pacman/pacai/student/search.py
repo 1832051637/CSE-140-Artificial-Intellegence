@@ -1,8 +1,7 @@
 """
 In this file, you will implement generic search algorithms which are called by Pacman agents.
 """
-from os import access
-from turtle import pos
+
 from ..util.stack import Stack
 from ..util.queue import Queue
 from ..util.priorityQueue import PriorityQueue
@@ -25,12 +24,6 @@ def depthFirstSearch(problem):
     """
 
     # *** Your Code Here ***
-    # print("Start: %s" % (str(problem.startingState())))
-    # print("Is the start a goal?: %s" %
-    #       (problem.isGoal(problem.startingState())))
-    # print("Start's successors: %s" %
-    #       (problem.successorStates(problem.startingState())))
-
     stck = Stack()
     visited = []
     # Push the start state and empty aciton list
@@ -40,7 +33,7 @@ def depthFirstSearch(problem):
         top = stck.pop()
         curr_node = top[0]
         action_lst = top[1]
-        if not curr_node in visited:  # if current node unvisited
+        if curr_node not in visited:  # if current node unvisited
             visited.append(curr_node)
             if problem.isGoal(curr_node):
                 return action_lst
@@ -70,7 +63,7 @@ def breadthFirstSearch(problem):
         top = q.pop()
         curr_node = top[0]
         action_lst = top[1]
-        if not curr_node in visited:  # if current node unvisited
+        if curr_node not in visited:  # if current node unvisited
             visited.append(curr_node)
             if problem.isGoal(curr_node):
                 return action_lst
@@ -101,7 +94,7 @@ def uniformCostSearch(problem):
         top = min_heap.pop()
         curr_node = top[0]
         action_lst = top[1]
-        if not curr_node in visited:  # if current node unvisited
+        if curr_node not in visited:  # if current node unvisited
             visited.append(curr_node)
             if problem.isGoal(curr_node):
                 return action_lst
@@ -133,7 +126,7 @@ def aStarSearch(problem, heuristic):
         top = min_heap.pop()
         curr_node = top[0]
         action_lst = top[1]
-        if not curr_node in visited:  # if current node unvisited
+        if curr_node not in visited:  # if current node unvisited
             visited.append(curr_node)
             if problem.isGoal(curr_node):
                 return action_lst
@@ -142,8 +135,8 @@ def aStarSearch(problem, heuristic):
                 direction = each_state[1]
                 new_action_lst = action_lst.copy()
                 new_action_lst.append(direction)
-                new_cost = problem.actionsCost(
-                    new_action_lst) + heuristic(position, problem)
+                new_cost = problem.actionsCost(new_action_lst) + heuristic(
+                    position, problem)
                 min_heap.push((position, new_action_lst), new_cost)
 
     # if failed

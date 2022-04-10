@@ -6,10 +6,9 @@ Good luck and happy searching!
 """
 
 import logging
-
-from pacai.core.distance import manhattan
+from pacai.student.search import uniformCostSearch
+from pacai.core.distance import manhattan, maze
 from pacai.core.actions import Actions
-from pacai.core.search import heuristic
 from pacai.core.search.position import PositionSearchProblem
 from pacai.core.search.problem import SearchProblem
 from pacai.core.directions import Directions
@@ -44,8 +43,8 @@ class CornersProblem(SearchProblem):
         for action in Directions.CARDINAL:
             x, y = currentPosition
             dx, dy = Actions.directionToVector(action)
-            nextx, nexty = int(x + dx), int(y + dy)
-            hitsWall = self.walls[nextx][nexty]
+            next_x, next_y = int(x + dx), int(y + dy)
+            hitsWall = self.walls[next_x][next_y]
 
             if (not hitsWall):
                 # Construct the successor.
@@ -53,7 +52,6 @@ class CornersProblem(SearchProblem):
         return successors
     ```
     """
-
     def __init__(self, startingGameState):
         super().__init__()
 
@@ -65,17 +63,17 @@ class CornersProblem(SearchProblem):
         self.corners = ((1, 1), (1, top), (right, 1), (right, top))
         for corner in self.corners:
             if not startingGameState.hasFood(*corner):
-                logging.warning('Warning: no food in corner ' + str(corner))
+                logging.warning("Warning: no food in corner " + str(corner))
 
         # *** Your Code Here ***
-        self.start_state = (self.startingPosition, [])
+        self.starting_state = (self.startingPosition, [])
         # raise NotImplementedError()
 
     def startingState(self):
-        return self.start_state
+        return self.starting_state
 
     def isGoal(self, state):
-        return len(state[1]) == 4  # If four corners have been visted
+        return len(state[1]) == 4  # If all four corners have been visted
 
     def successorStates(self, state):
         successors = []
@@ -83,15 +81,18 @@ class CornersProblem(SearchProblem):
         for action in Directions.CARDINAL:
             x, y = curr_pos
             dx, dy = Actions.directionToVector(action)
-            nextx, nexty = int(x + dx), int(y + dy)
-            hitsWall = self.walls[nextx][nexty]
+            next_x, next_y = int(x + dx), int(y + dy)
+            hitsWall = self.walls[next_x][next_y]
 
             if not hitsWall:
                 # Construct the successor.
                 visited_corner = state[1].copy()
-                if (nextx, nexty) in self.corners and (nextx, nexty) not in visited_corner:
-                    visited_corner.append((nextx, nexty))
-                next_state = ((nextx, nexty), visited_corner)
+                if (next_x, next_y) in self.corners and (
+                        next_x,
+                        next_y,
+                ) not in visited_corner:
+                    visited_corner.append((next_x, next_y))
+                next_state = ((next_x, next_y), visited_corner)
                 successors.append((next_state, action, 1))
         self._numExpanded += 1
         return successors
@@ -103,7 +104,7 @@ class CornersProblem(SearchProblem):
         This is implemented for you.
         """
 
-        if (actions is None):
+        if actions is None:
             return 999999
 
         x, y = self.startingPosition
@@ -131,17 +132,19 @@ def cornersHeuristic(state, problem):
     # walls = problem.walls  # These are the walls of the maze, as a Grid.
 
     # *** Your Code Here ***
-    corners = problem.corners   # All corners
-    unvisited = []              # Unvisited corners
-    visited = state[1]          # Visited corners
-    curr_pos = state[0]         # Current position
-    heuristic_value = 0         # Heuristic value to return
+    corners = problem.corners  # All corners
+    unvisited = []  # Unvisited corners
+    visited = state[1]  # Visited corners
+    curr_pos = state[0]  # Current position
+    heuristic_value = 0  # Heuristic value to return
 
-    unvisited = list(set(corners) - set(visited))   # Get ALL Unvisted Corners
+    # List of all Unvisted Corners
+    unvisited = list(set(corners) - set(visited))
 
-    # Find the shortest manhattan distance from current position to all other unvisted corners
+    # Find the shortest manhattan distance from current position
+    # to all other unvisted corners
     while unvisited:
-        min_distance = float('inf')
+        min_distance = float("inf")
         closest_corner = ()
         for corner in unvisited:
             temp_distance = manhattan(curr_pos, corner)
@@ -188,14 +191,33 @@ def foodHeuristic(state, problem):
     position, foodGrid = state
 
     # *** Your Code Here ***
-    return heuristic.null(state, problem)  # Default to the null heuristic.
+    unvisited_foods = foodGrid.asList()
+    heuristic_value = 0
+    if unvisited_foods:
+
+        min_distance = float("inf")
+        closest_food_pos = ()
+        for food in unvisited_foods:
+            temp_dis = maze(position, food, problem.startingGameState)
+            if temp_dis < min_distance:
+                min_distance = temp_dis
+                closest_food_pos = food
+
+        max_food_distance = 0
+        for food in unvisited_foods:
+            temp_dis = maze(food, closest_food_pos, problem.startingGameState)
+            if temp_dis > max_food_distance:
+                max_food_distance = temp_dis
+
+        heuristic_value = min_distance + max_food_distance
+    return heuristic_value
+    # return heuristic.null(state, problem)  # Default to the null heuristic.
 
 
 class ClosestDotSearchAgent(SearchAgent):
     """
     Search for all food using a sequence of searches.
     """
-
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
 
@@ -205,7 +227,7 @@ class ClosestDotSearchAgent(SearchAgent):
 
         currentState = state
 
-        while (currentState.getFood().count() > 0):
+        while currentState.getFood().count() > 0:
             nextPathSegment = self.findPathToClosestDot(
                 currentState)  # The missing piece
             self._actions += nextPathSegment
@@ -213,12 +235,13 @@ class ClosestDotSearchAgent(SearchAgent):
             for action in nextPathSegment:
                 legal = currentState.getLegalActions()
                 if action not in legal:
-                    raise Exception('findPathToClosestDot returned an illegal move: %s!\n%s' %
-                                    (str(action), str(currentState)))
+                    raise Exception(
+                        "findPathToClosestDot returned an illegal move: %s!\n%s"
+                        % (str(action), str(currentState)))
 
                 currentState = currentState.generateSuccessor(0, action)
 
-        logging.info('Path found with cost %d.' % len(self._actions))
+        logging.info("Path found with cost %d." % len(self._actions))
 
     def findPathToClosestDot(self, gameState):
         """
@@ -232,7 +255,12 @@ class ClosestDotSearchAgent(SearchAgent):
         # problem = AnyFoodSearchProblem(gameState)
 
         # *** Your Code Here ***
-        raise NotImplementedError()
+        problem = AnyFoodSearchProblem(gameState)
+
+        # Here I just use the UCS, but BFS also works
+        return uniformCostSearch(problem)
+
+        # raise NotImplementedError()
 
 
 class AnyFoodSearchProblem(PositionSearchProblem):
@@ -255,12 +283,15 @@ class AnyFoodSearchProblem(PositionSearchProblem):
     The state is Pacman's position.
     Fill this in with a goal test that will complete the problem definition.
     """
-
     def __init__(self, gameState, start=None):
         super().__init__(gameState, goal=None, start=start)
 
         # Store the food for later reference.
         self.food = gameState.getFood()
+
+    def isGoal(self, state):
+        # Return True if this position is a food
+        return self.food[state[0]][state[1]]
 
 
 class ApproximateSearchAgent(BaseAgent):
@@ -276,6 +307,5 @@ class ApproximateSearchAgent(BaseAgent):
     `pacai.agents.base.BaseAgent.registerInitialState`:
     This method is called before any moves are made.
     """
-
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)

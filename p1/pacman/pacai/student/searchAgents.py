@@ -78,6 +78,8 @@ class CornersProblem(SearchProblem):
     def successorStates(self, state):
         successors = []
         curr_pos = state[0]
+
+        # Successor = ((nextX, nextY), visited corners)
         for action in Directions.CARDINAL:
             x, y = curr_pos
             dx, dy = Actions.directionToVector(action)
@@ -85,7 +87,7 @@ class CornersProblem(SearchProblem):
             hitsWall = self.walls[next_x][next_y]
 
             if not hitsWall:
-                # Construct the successor.
+                # Build successors
                 visited_corner = state[1].copy()
                 if (next_x, next_y) in self.corners and (
                         next_x,
@@ -94,6 +96,7 @@ class CornersProblem(SearchProblem):
                     visited_corner.append((next_x, next_y))
                 next_state = ((next_x, next_y), visited_corner)
                 successors.append((next_state, action, 1))
+        # Expand node +1
         self._numExpanded += 1
         return successors
 
@@ -132,7 +135,7 @@ def cornersHeuristic(state, problem):
     # walls = problem.walls  # These are the walls of the maze, as a Grid.
 
     # *** Your Code Here ***
-    corners = problem.corners  # All corners
+    corners = problem.corners  # All four corners
     unvisited = []  # Unvisited corners
     visited = state[1]  # Visited corners
     curr_pos = state[0]  # Current position
@@ -141,9 +144,9 @@ def cornersHeuristic(state, problem):
     # List of all Unvisted Corners
     unvisited = list(set(corners) - set(visited))
 
-    # Find the shortest manhattan distance from current position
+    # Find the shortest manhattan distance from current coordinate
     # to all other unvisted corners
-    while unvisited:
+    while len(unvisited) > 0:
         min_distance = float("inf")
         closest_corner = ()
         for corner in unvisited:
@@ -193,8 +196,11 @@ def foodHeuristic(state, problem):
     # *** Your Code Here ***
     unvisited_foods = foodGrid.asList()
     heuristic_value = 0
-    if unvisited_foods:
 
+    # Check if we still have food to eat
+    if len(unvisited_foods) > 0:
+        # Using heuristic = distance(pacman, nearest food)
+        #                   + distance(nearest food, farthest food to nearest food)
         min_distance = float("inf")
         closest_food_pos = ()
         for food in unvisited_foods:

@@ -70,7 +70,8 @@ def breadthFirstSearch(problem):
             for each_state in problem.successorStates(curr_node):
                 position = each_state[0]
                 direction = each_state[1]
-                new_action_lst = action_lst.copy()
+                new_action_lst = action_lst.copy(
+                )  # We have to use copy of list
                 new_action_lst.append(direction)
                 q.push((position, new_action_lst))
 
@@ -84,7 +85,7 @@ def uniformCostSearch(problem):
     """
 
     # *** Your Code Here ***
-    # Uniform Cost Search is a version of Dijkstra
+    # Uniform Cost Search is another version of Dijkstra
     min_heap = PriorityQueue()
     visited = []
     # Push the start state and empty aciton list

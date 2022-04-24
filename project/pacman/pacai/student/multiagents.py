@@ -2,6 +2,8 @@ import random
 
 from pacai.agents.base import BaseAgent
 from pacai.agents.search.multiagent import MultiAgentSearchAgent
+from pacai.core.distance import manhattan
+
 
 class ReflexAgent(BaseAgent):
     """
@@ -12,7 +14,6 @@ class ReflexAgent(BaseAgent):
     You are welcome to change it in any way you see fit,
     so long as you don't touch the method headers.
     """
-
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
 
@@ -31,10 +32,15 @@ class ReflexAgent(BaseAgent):
         legalMoves = gameState.getLegalActions()
 
         # Choose one of the best actions.
-        scores = [self.evaluationFunction(gameState, action) for action in legalMoves]
+        scores = [
+            self.evaluationFunction(gameState, action) for action in legalMoves
+        ]
         bestScore = max(scores)
-        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
-        chosenIndex = random.choice(bestIndices)  # Pick randomly among the best.
+        bestIndices = [
+            index for index in range(len(scores)) if scores[index] == bestScore
+        ]
+        chosenIndex = random.choice(
+            bestIndices)  # Pick randomly among the best.
 
         return legalMoves[chosenIndex]
 
@@ -48,17 +54,60 @@ class ReflexAgent(BaseAgent):
         in your evaluation function.
         """
 
+        # print(action)
         successorGameState = currentGameState.generatePacmanSuccessor(action)
 
         # Useful information you can extract.
-        # newPosition = successorGameState.getPacmanPosition()
+        newPosition = successorGameState.getPacmanPosition()
         # oldFood = currentGameState.getFood()
-        # newGhostStates = successorGameState.getGhostStates()
-        # newScaredTimes = [ghostState.getScaredTimer() for ghostState in newGhostStates]
+        newGhostStates = successorGameState.getGhostStates()
+        newScaredTimes = [
+            ghostState.getScaredTimer() for ghostState in newGhostStates
+        ]
 
         # *** Your Code Here ***
 
-        return successorGameState.getScore()
+        all_scared = True
+        for ghost_scared_time in newScaredTimes:
+            if ghost_scared_time == 0:
+                all_scared = False
+                break
+
+        if all_scared:
+            return successorGameState.getScore() + 100
+
+        newFood = successorGameState.getFood().asList()
+        minFoodist = float("inf")
+        nearest_food = None
+        for food in newFood:
+            if (manhattan(newPosition, food) < minFoodist):
+                minFoodist = manhattan(newPosition, food)
+                nearest_food = food
+
+        # Get the nearest ghost distance to the nearest food
+        min_ghost_dis = float("inf")
+        for ghost in successorGameState.getGhostPositions():
+            if nearest_food is not None and \
+                    (manhattan(nearest_food, ghost) < min_ghost_dis):
+                min_ghost_dis = manhattan(nearest_food, ghost)
+
+            # Warning: If the ghost is too close to pacman
+            if (manhattan(newPosition, ghost) < 2):
+                return -float('inf')
+
+        # Penalty to not move
+        deduction = 0
+        if action == 'Stop':
+            deduction = -30
+
+        # print(min_ghost_dis, minFoodist)
+
+        # So, the closer the nearest food is,
+        # and the farther the nearest ghost to the nearest food is ,
+        # the evaluation function is higher.
+        return successorGameState.getScore(
+        ) + min_ghost_dis + 1.0 / minFoodist + deduction
+
 
 class MinimaxAgent(MultiAgentSearchAgent):
     """
@@ -86,9 +135,75 @@ class MinimaxAgent(MultiAgentSearchAgent):
     `pacai.agents.search.multiagent.MultiAgentSearchAgent.getTreeDepth`
     and `pacai.agents.search.multiagent.MultiAgentSearchAgent.getEvaluationFunction`.
     """
-
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
+
+    def getTreeDepth(self):
+        return super().getTreeDepth()
+
+    def getEvaluationFunction(self):
+        return super().getEvaluationFunction()
+
+    def getAction(self, gameState):
+        # Return the action
+        val = self.getValue(gameState, self.index, 0)
+        return val[1]
+
+    def getValue(self, state, index, depth):
+        # print(state.getNumAgents(), mindex, index)
+
+        # Check the ending condition: game over, no more valid action,
+        # or tree depth exceeds
+        if len(state.getLegalActions(index)) == 0 \
+                or depth == self.getTreeDepth() \
+                or state.isWin() or state.isLose():
+            return (self.getEvaluationFunction()(state), "")
+        if index == 0:
+            return self.max_value(state, index, depth)
+        else:
+            return self.min_value(state, index, depth)
+
+    def max_value(self, state, index, depth):
+        max_val = (-float("inf"), '')
+        agent_num = state.getNumAgents()
+        legal_actions = state.getLegalActions(index)
+
+        for action in legal_actions:
+            successor = state.generateSuccessor(index, action)
+            new_index = index + 1
+            new_depth = depth
+
+            # Update depth and index if this is a pacman
+            if new_index == agent_num:
+                new_index = new_index % agent_num
+                new_depth += 1
+            temp_val = (self.getValue(successor, new_index,
+                                      new_depth)[0], action)
+            if temp_val[0] >= max_val[0]:
+                max_val = temp_val
+
+        return max_val
+
+    def min_value(self, state, index, depth):
+        min_val = (float("inf"), '')
+        agent_num = state.getNumAgents()
+        legal_actions = state.getLegalActions(index)
+        for action in legal_actions:
+            successor = state.generateSuccessor(index, action)
+            new_index = index + 1
+            new_depth = depth
+
+            # Update depth and index if this is a pacman
+            if new_index == agent_num:
+                new_index = new_index % agent_num
+                new_depth += 1
+            temp_val = (self.getValue(successor, new_index,
+                                      new_depth)[0], action)
+            if temp_val[0] <= min_val[0]:
+                min_val = temp_val
+
+        return min_val
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -101,9 +216,93 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     `pacai.agents.search.multiagent.MultiAgentSearchAgent.getTreeDepth`
     and `pacai.agents.search.multiagent.MultiAgentSearchAgent.getEvaluationFunction`.
     """
-
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
+
+    def getTreeDepth(self):
+        return super().getTreeDepth()
+
+    def getEvaluationFunction(self):
+        return super().getEvaluationFunction()
+
+    def getAction(self, gameState):
+        # Return the action
+        val = self.getValue_ab(gameState, self.index, 0, -float("inf"),
+                               float("inf"))
+        return val[1]
+
+    def getValue_ab(self, state, index, depth, alpha, beta):
+        # print(state.getNumAgents(), mindex, index)
+
+        # Check the ending condition: game over, no more valid action,
+        # or tree depth exceeds
+        if len(state.getLegalActions(index)) == 0 \
+                or depth == self.getTreeDepth():
+            # \
+            # or state.isWin() or state.isLose():
+            return (self.getEvaluationFunction()(state), "")
+        if index == 0:
+            return self.max_value_ab(state, index, depth, alpha, beta)
+        else:
+            return self.min_value_ab(state, index, depth, alpha, beta)
+
+    def max_value_ab(self, state, index, depth, a, b):
+        max_val = (-float("inf"), '')
+        agent_num = state.getNumAgents()
+        legal_actions = state.getLegalActions(index)
+
+        for action in legal_actions:
+            successor = state.generateSuccessor(index, action)
+            new_index = index + 1
+            new_depth = depth
+
+            # Update depth and index if this is a pacman
+            if new_index == agent_num:
+                new_index = new_index % agent_num
+                new_depth += 1
+            temp_val = (self.getValue_ab(successor, new_index, new_depth, a,
+                                         b)[0], action)
+            if temp_val[0] >= max_val[0]:
+                max_val = temp_val
+
+            if max_val[0] > b:
+                # We dont need to continue if current max > beta
+                return max_val
+
+            # a = max(a, max_val[0])
+            if max_val[0] >= a:
+                a = max_val[0]
+
+        return max_val
+
+    def min_value_ab(self, state, index, depth, a, b):
+        min_val = (float("inf"), '')
+        agent_num = state.getNumAgents()
+        legal_actions = state.getLegalActions(index)
+        for action in legal_actions:
+            successor = state.generateSuccessor(index, action)
+            new_index = index + 1
+            new_depth = depth
+
+            # Update depth and index if this is a pacman
+            if new_index == agent_num:
+                new_index = new_index % agent_num
+                new_depth += 1
+            temp_val = (self.getValue_ab(successor, new_index, new_depth, a,
+                                         b)[0], action)
+
+            if temp_val[0] <= min_val[0]:
+                min_val = temp_val
+
+            if min_val[0] < a:
+                # We dont need to continue if current min <= alpha
+                return min_val
+
+            # b = min(b, min_val[0])
+            if min_val[0] <= b:
+                b = min_val[0]
+        return min_val
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -118,9 +317,74 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     `pacai.agents.search.multiagent.MultiAgentSearchAgent.getTreeDepth`
     and `pacai.agents.search.multiagent.MultiAgentSearchAgent.getEvaluationFunction`.
     """
-
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
+
+    def getAction(self, gameState):
+        # Return the action
+        val = self.getValue(gameState, self.index, 0)
+        return val[1]
+
+    def getValue(self, state, index, depth):
+        # print(state.getNumAgents(), mindex, index)
+
+        # Check the ending condition: game over, no more valid action,
+        # or tree depth exceeds
+        if len(state.getLegalActions(index)) == 0 \
+                or depth == self.getTreeDepth() \
+                or state.isWin() or state.isLose():
+            return (self.getEvaluationFunction()(state), "")
+        if index == 0:
+            return self.max_value(state, index, depth)
+        else:
+            return self.exp_value(state, index, depth)
+
+    def max_value(self, state, index, depth):
+        max_val = (-float("inf"), '')
+        agent_num = state.getNumAgents()
+        legal_actions = state.getLegalActions(index)
+
+        for action in legal_actions:
+            successor = state.generateSuccessor(index, action)
+            new_index = index + 1
+            new_depth = depth
+
+            # Update depth and index if this is a pacman
+            if new_index == agent_num:
+                new_index = new_index % agent_num
+                new_depth += 1
+            temp_val = (self.getValue(successor, new_index,
+                                      new_depth)[0], action)
+            if temp_val[0] >= max_val[0]:
+                max_val = temp_val
+
+        return max_val
+
+    def exp_value(self, state, index, depth):
+        exp_val = 0  # expectation value
+        agent_num = state.getNumAgents()
+        legal_actions = state.getLegalActions(index)
+
+        probility = 1.0 / len(legal_actions)
+
+        for action in legal_actions:
+            successor = state.generateSuccessor(index, action)
+            new_index = index + 1
+            new_depth = depth
+
+            # Update depth and index if this is a pacman
+            if new_index == agent_num:
+                new_index = new_index % agent_num
+                new_depth += 1
+            temp_val = (self.getValue(successor, new_index,
+                                      new_depth)[0], action)
+            # if temp_val[0] <= exp_val[0]:
+            #     exp_val = temp_val
+            # Calculate the expectation for expectimax
+            exp_val = (exp_val + probility * temp_val[0])
+
+        return exp_val, action
+
 
 def betterEvaluationFunction(currentGameState):
     """
@@ -130,6 +394,7 @@ def betterEvaluationFunction(currentGameState):
     """
 
     return currentGameState.getScore()
+
 
 class ContestAgent(MultiAgentSearchAgent):
     """
@@ -145,6 +410,5 @@ class ContestAgent(MultiAgentSearchAgent):
 
     `pacai.agents.base.BaseAgent.getAction`
     """
-
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)

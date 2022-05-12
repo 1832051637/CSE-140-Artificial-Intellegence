@@ -14,6 +14,7 @@ class ReflexAgent(BaseAgent):
     You are welcome to change it in any way you see fit,
     so long as you don't touch the method headers.
     """
+
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
 
@@ -32,15 +33,12 @@ class ReflexAgent(BaseAgent):
         legalMoves = gameState.getLegalActions()
 
         # Choose one of the best actions.
-        scores = [
-            self.evaluationFunction(gameState, action) for action in legalMoves
-        ]
+        scores = [self.evaluationFunction(gameState, action) for action in legalMoves]
         bestScore = max(scores)
         bestIndices = [
             index for index in range(len(scores)) if scores[index] == bestScore
         ]
-        chosenIndex = random.choice(
-            bestIndices)  # Pick randomly among the best.
+        chosenIndex = random.choice(bestIndices)  # Pick randomly among the best.
 
         return legalMoves[chosenIndex]
 
@@ -61,9 +59,7 @@ class ReflexAgent(BaseAgent):
         newPosition = successorGameState.getPacmanPosition()
         # oldFood = currentGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
-        newScaredTimes = [
-            ghostState.getScaredTimer() for ghostState in newGhostStates
-        ]
+        newScaredTimes = [ghostState.getScaredTimer() for ghostState in newGhostStates]
 
         # *** Your Code Here ***
 
@@ -77,36 +73,41 @@ class ReflexAgent(BaseAgent):
             return successorGameState.getScore() + 100
 
         newFood = successorGameState.getFood().asList()
-        minFoodist = float("inf")
+        nearest_food_dist = float("inf")
         nearest_food = None
         for food in newFood:
-            if (manhattan(newPosition, food) < minFoodist):
-                minFoodist = manhattan(newPosition, food)
+            if manhattan(newPosition, food) < nearest_food_dist:
+                nearest_food_dist = manhattan(newPosition, food)
                 nearest_food = food
 
         # Get the nearest ghost distance to the nearest food
-        min_ghost_dis = float("inf")
+        nearest_ghost_dist = float("inf")
         for ghost in successorGameState.getGhostPositions():
-            if nearest_food is not None and \
-                    (manhattan(nearest_food, ghost) < min_ghost_dis):
-                min_ghost_dis = manhattan(nearest_food, ghost)
+            if nearest_food is not None and (
+                manhattan(nearest_food, ghost) < nearest_ghost_dist
+            ):
+                nearest_ghost_dist = manhattan(nearest_food, ghost)
 
             # Warning: If the ghost is too close to pacman
-            if (manhattan(newPosition, ghost) < 2):
-                return -float('inf')
+            if manhattan(newPosition, ghost) < 2:
+                return -float("inf")
 
         # Penalty to not move
         deduction = 0
-        if action == 'Stop':
+        if action == "Stop":
             deduction = -30
 
-        # print(min_ghost_dis, minFoodist)
+        # print(nearest_ghost_dist, nearest_food_dist)
 
         # So, the closer the nearest food is,
         # and the farther the nearest ghost to the nearest food is ,
         # the evaluation function is higher.
-        return successorGameState.getScore(
-        ) + min_ghost_dis + 1.0 / minFoodist + deduction
+        return (
+            successorGameState.getScore()
+            + nearest_ghost_dist
+            + 1.0 / nearest_food_dist
+            + deduction
+        )
 
 
 class MinimaxAgent(MultiAgentSearchAgent):
@@ -135,6 +136,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
     `pacai.agents.search.multiagent.MultiAgentSearchAgent.getTreeDepth`
     and `pacai.agents.search.multiagent.MultiAgentSearchAgent.getEvaluationFunction`.
     """
+
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
 
@@ -154,9 +156,12 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
         # Check the ending condition: game over, no more valid action,
         # or tree depth exceeds
-        if len(state.getLegalActions(index)) == 0 \
-                or depth == self.getTreeDepth() \
-                or state.isWin() or state.isLose():
+        if (
+            len(state.getLegalActions(index)) == 0
+            or depth == self.getTreeDepth()
+            or state.isWin()
+            or state.isLose()
+        ):
             return (self.getEvaluationFunction()(state), "")
         if index == 0:
             return self.max_value(state, index, depth)
@@ -164,7 +169,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
             return self.min_value(state, index, depth)
 
     def max_value(self, state, index, depth):
-        max_val = (-float("inf"), '')
+        max_val = (-float("inf"), "")
         agent_num = state.getNumAgents()
         legal_actions = state.getLegalActions(index)
 
@@ -177,15 +182,14 @@ class MinimaxAgent(MultiAgentSearchAgent):
             if new_index == agent_num:
                 new_index = new_index % agent_num
                 new_depth += 1
-            temp_val = (self.getValue(successor, new_index,
-                                      new_depth)[0], action)
+            temp_val = (self.getValue(successor, new_index, new_depth)[0], action)
             if temp_val[0] >= max_val[0]:
                 max_val = temp_val
 
         return max_val
 
     def min_value(self, state, index, depth):
-        min_val = (float("inf"), '')
+        min_val = (float("inf"), "")
         agent_num = state.getNumAgents()
         legal_actions = state.getLegalActions(index)
         for action in legal_actions:
@@ -197,8 +201,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
             if new_index == agent_num:
                 new_index = new_index % agent_num
                 new_depth += 1
-            temp_val = (self.getValue(successor, new_index,
-                                      new_depth)[0], action)
+            temp_val = (self.getValue(successor, new_index, new_depth)[0], action)
             if temp_val[0] <= min_val[0]:
                 min_val = temp_val
 
@@ -216,6 +219,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     `pacai.agents.search.multiagent.MultiAgentSearchAgent.getTreeDepth`
     and `pacai.agents.search.multiagent.MultiAgentSearchAgent.getEvaluationFunction`.
     """
+
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
 
@@ -227,8 +231,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
     def getAction(self, gameState):
         # Return the action
-        val = self.getValue_ab(gameState, self.index, 0, -float("inf"),
-                               float("inf"))
+        val = self.getValue_ab(gameState, self.index, 0, -float("inf"), float("inf"))
         return val[1]
 
     def getValue_ab(self, state, index, depth, alpha, beta):
@@ -236,8 +239,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
         # Check the ending condition: game over, no more valid action,
         # or tree depth exceeds
-        if len(state.getLegalActions(index)) == 0 \
-                or depth == self.getTreeDepth():
+        if len(state.getLegalActions(index)) == 0 or depth == self.getTreeDepth():
             # \
             # or state.isWin() or state.isLose():
             return (self.getEvaluationFunction()(state), "")
@@ -247,7 +249,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             return self.min_value_ab(state, index, depth, alpha, beta)
 
     def max_value_ab(self, state, index, depth, a, b):
-        max_val = (-float("inf"), '')
+        max_val = (-float("inf"), "")
         agent_num = state.getNumAgents()
         legal_actions = state.getLegalActions(index)
 
@@ -260,8 +262,10 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             if new_index == agent_num:
                 new_index = new_index % agent_num
                 new_depth += 1
-            temp_val = (self.getValue_ab(successor, new_index, new_depth, a,
-                                         b)[0], action)
+            temp_val = (
+                self.getValue_ab(successor, new_index, new_depth, a, b)[0],
+                action,
+            )
             if temp_val[0] >= max_val[0]:
                 max_val = temp_val
 
@@ -276,7 +280,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         return max_val
 
     def min_value_ab(self, state, index, depth, a, b):
-        min_val = (float("inf"), '')
+        min_val = (float("inf"), "")
         agent_num = state.getNumAgents()
         legal_actions = state.getLegalActions(index)
         for action in legal_actions:
@@ -288,8 +292,10 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             if new_index == agent_num:
                 new_index = new_index % agent_num
                 new_depth += 1
-            temp_val = (self.getValue_ab(successor, new_index, new_depth, a,
-                                         b)[0], action)
+            temp_val = (
+                self.getValue_ab(successor, new_index, new_depth, a, b)[0],
+                action,
+            )
 
             if temp_val[0] <= min_val[0]:
                 min_val = temp_val
@@ -317,6 +323,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     `pacai.agents.search.multiagent.MultiAgentSearchAgent.getTreeDepth`
     and `pacai.agents.search.multiagent.MultiAgentSearchAgent.getEvaluationFunction`.
     """
+
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
 
@@ -330,9 +337,12 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
         # Check the ending condition: game over, no more valid action,
         # or tree depth exceeds
-        if len(state.getLegalActions(index)) == 0 \
-                or depth == self.getTreeDepth() \
-                or state.isWin() or state.isLose():
+        if (
+            len(state.getLegalActions(index)) == 0
+            or depth == self.getTreeDepth()
+            or state.isWin()
+            or state.isLose()
+        ):
             return (self.getEvaluationFunction()(state), "")
         if index == 0:
             return self.max_value(state, index, depth)
@@ -340,7 +350,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             return self.exp_value(state, index, depth)
 
     def max_value(self, state, index, depth):
-        max_val = (-float("inf"), '')
+        max_val = (-float("inf"), "")
         agent_num = state.getNumAgents()
         legal_actions = state.getLegalActions(index)
 
@@ -353,8 +363,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             if new_index == agent_num:
                 new_index = new_index % agent_num
                 new_depth += 1
-            temp_val = (self.getValue(successor, new_index,
-                                      new_depth)[0], action)
+            temp_val = (self.getValue(successor, new_index, new_depth)[0], action)
             if temp_val[0] >= max_val[0]:
                 max_val = temp_val
 
@@ -376,12 +385,11 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             if new_index == agent_num:
                 new_index = new_index % agent_num
                 new_depth += 1
-            temp_val = (self.getValue(successor, new_index,
-                                      new_depth)[0], action)
+            temp_val = (self.getValue(successor, new_index, new_depth)[0], action)
             # if temp_val[0] <= exp_val[0]:
             #     exp_val = temp_val
             # Calculate the expectation for expectimax
-            exp_val = (exp_val + probility * temp_val[0])
+            exp_val = exp_val + probility * temp_val[0]
 
         return exp_val, action
 
@@ -390,10 +398,78 @@ def betterEvaluationFunction(currentGameState):
     """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable evaluation function.
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION: The way I did is reimplement the algorithm in my reflex agent, so I can add
+        more or less feature to the evaluation function
+        So, the closer the nearest food is,
+        and the farther the nearest ghost to the pacman,
+        the evaluation function is higher.
+        I also encourage the pacman to eat big dot and get closer to scared ghost.
+        The final evaluation is a linear combination of these feature score.
     """
 
-    return currentGameState.getScore()
+    # Useful information you can extract.
+    newPosition = currentGameState.getPacmanPosition()
+    # oldFood = currentGameState.getFood()
+    # newGhostStates = currentGameState.getGhostStates()
+
+    scared_ghosts, unscared_ghost = [], []
+    for ghost in currentGameState.getGhostStates():
+        if ghost.getScaredTimer() > 0:
+            scared_ghosts.append(ghost)
+        else:
+            unscared_ghost.append(ghost)
+    # print(unscared_ghost)
+    newFood = currentGameState.getFood().asList()
+    nearest_food_dist = float("inf")
+    for food in newFood:
+        if manhattan(newPosition, food) < nearest_food_dist:
+            nearest_food_dist = manhattan(newPosition, food)
+
+    # Get the nearest ghost distance to the nearest food
+    nearest_ghost_dist = float("inf")
+    if len(unscared_ghost) > 0:
+        for ghost in unscared_ghost:
+            if manhattan(newPosition, ghost.getPosition()) < nearest_ghost_dist:
+                nearest_ghost_dist = manhattan(newPosition, ghost.getPosition())
+    # else:
+    #     nearest_ghost_dist = 0
+
+    # # Warning: If the ghost is too close to pacman
+    # if (manhattan(newPosition, ghost.getPosition()) < 2):
+    #     return -float('inf')
+
+    # print(nearest_ghost_dist)
+    if nearest_ghost_dist == 0:
+        return -float("inf")
+
+    nearest_scared_ghost_dis = float("inf")
+    if len(scared_ghosts) > 0:
+        for ghost in scared_ghosts:
+            if manhattan(newPosition, ghost.getPosition()) < nearest_ghost_dist:
+                nearest_ghost_dist = manhattan(newPosition, ghost.getPosition())
+
+    else:
+        nearest_scared_ghost_dis = 0
+    # print(nearest_ghost_dist, nearest_food_dist)
+    big_dot_num = len(currentGameState.getCapsules())
+
+    # number of foods left
+    food_num = len(newFood)
+    if food_num == 0:
+        return float("inf")
+
+    if nearest_scared_ghost_dis > nearest_food_dist:
+        # If scared_ghost too far away, pacman prefers to eat food
+        nearest_scared_ghost_dis = nearest_food_dist
+
+    return (
+        currentGameState.getScore()
+        + -30.0 * big_dot_num
+        + -3.9 * food_num
+        + -7.8 / nearest_ghost_dist
+        - 1.3 * nearest_food_dist
+        + -2.2 * nearest_scared_ghost_dis
+    )
 
 
 class ContestAgent(MultiAgentSearchAgent):
@@ -410,5 +486,6 @@ class ContestAgent(MultiAgentSearchAgent):
 
     `pacai.agents.base.BaseAgent.getAction`
     """
+
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)

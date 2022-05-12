@@ -13,7 +13,7 @@ NOT_POSSIBLE = None
 def question2():
     """
     [Enter a description of what you did here.]
-    Here I change a smaller noise, so that the agent will be less easier to 
+    Here I change a smaller noise, so that the agent will be less easier to
     acciently fall off from the bridge
     """
 
@@ -26,7 +26,7 @@ def question2():
 def question3a():
     """
     [Enter a description of what you did here.]
-    If the livingReward is negative but not large penalty, then 
+    If the livingReward is negative but not large penalty, then
     the agent would prefer to end quick at 1 instead of 10
     """
 
@@ -40,7 +40,7 @@ def question3a():
 def question3b():
     """
     [Enter a description of what you did here.]
-    Large noise makes the agent avoid cliff, but 
+    Large noise makes the agent avoid cliff, but
     negative reward and smaller discount makes agent prefer nearer exit
     """
 

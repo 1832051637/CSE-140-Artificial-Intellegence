@@ -78,17 +78,18 @@ class ValueIterationAgent(ValueEstimationAgent):
 
     def getQValue(self, state, action):
         #     pacai.agents.learning.value.ValueEstimationAgent.getQValue`:
-        # The q-value of the state action pair (after the indicated number of value iteration passes).
+        # The q-value of the state action pair (after the indicated number of
+        # value iteration passes).
         # Note that value iteration does not necessarily create this quantity,
         # and you may have to derive it on the fly.
         q_value = 0
         # print(self.mdp.getTransitionStatesAndProbs(state, action))
-        for nextState, probability in self.mdp.getTransitionStatesAndProbs(
+        for next_state, probability in self.mdp.getTransitionStatesAndProbs(
             state, action
         ):
-            next_value = self.values.get(nextState, 0.0)
+            next_value = self.values.get(next_state, 0.0)
             q_value += probability * (
-                self.mdp.getReward(state, action, nextState)
+                self.mdp.getReward(state, action, next_state)
                 + (self.discountRate * next_value)
             )
 
@@ -96,11 +97,11 @@ class ValueIterationAgent(ValueEstimationAgent):
         # return self.computeQValueFromValues(state, action)
 
     def getPolicy(self, state):
-        possibleActions = self.mdp.getPossibleActions(state)
+        actions = self.mdp.getPossibleActions(state)
         max_action = None
         max_value = -float("inf")
 
-        for action in possibleActions:
+        for action in actions:
             temp_value = self.getQValue(state, action)
             if temp_value > max_value:
                 max_value = temp_value
@@ -108,5 +109,3 @@ class ValueIterationAgent(ValueEstimationAgent):
 
         # print(max_action)
         return max_action
-        # return self.computeActionFromValues(state)
-

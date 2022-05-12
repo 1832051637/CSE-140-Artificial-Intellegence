@@ -59,12 +59,7 @@ class QLearningAgent(ReinforcementAgent):
         and `pacai.core.directions.Directions`.
         Should return 0.0 if the (state, action) pair has never been seen.
         """
-        # if (state, action) not in self.q_values:
-        #     return 0.0
-        # else:
-        #     return self.q_values[(state, action)]
         return self.q_values.get((state, action), 0.0)
-        # return 0.0
 
     def getValue(self, state):
         """
@@ -82,7 +77,7 @@ class QLearningAgent(ReinforcementAgent):
         actions = self.getLegalActions(state)
 
         if len(actions) == 0:
-            return 0
+            return 0.0
 
         max_value = -float("inf")
         for action in actions:
@@ -138,7 +133,7 @@ class QLearningAgent(ReinforcementAgent):
 
         return self.getPolicy(state)
 
-    def update(self, state, action, nextState, reward):
+    def update(self, state, action, next_state, reward):
         #     `pacai.agents.learning.reinforcement.ReinforcementAgent.update`:
         # The parent class calls this to observe a state transition and reward.
         # You should do your Q-Value update here.
@@ -148,19 +143,20 @@ class QLearningAgent(ReinforcementAgent):
         alpha = self.getAlpha()
         discount = self.getDiscountRate()
         # Call getValue() to get the best next value
-        next_val = self.getValue(nextState)
+        next_val = self.getValue(next_state)
 
-        new_val = self._calc_new_val(reward, discount, next_val)
+        new_val = _calc_new_val(reward, discount, next_val)
 
         self.q_values[(state, action)] = (1 - alpha) * self.q_values[
             (state, action)
         ] + (alpha * new_val)
         return None
 
-    def _calc_new_val(self, reward, discount, next_value):
-        # HELPER Function: Calculate the new value for current state
-        # by given the best value for the next state
-        return reward + (discount * next_value)
+
+def _calc_new_val(reward, discount, next_value):
+    # HELPER Function: Calculate the new value for current state
+    # by given the best value for the next state
+    return reward + (discount * next_value)
 
 
 class PacmanQAgent(QLearningAgent):
@@ -218,8 +214,8 @@ class ApproximateQAgent(PacmanQAgent):
     ):
         super().__init__(index, **kwargs)
         self.featExtractor = reflection.qualifiedImport(extractor)
-
         # You might want to initialize weights here.
+        self.weights = {}
 
     def final(self, state):
         """
@@ -233,58 +229,39 @@ class ApproximateQAgent(PacmanQAgent):
         if self.episodesSoFar == self.numTraining:
             # You might want to print your weights here for debugging.
             # *** Your Code Here ***
-            raise NotImplementedError()
+            # print(self.weights)
+            return self.weights
+            # raise NotImplementedError()
 
-    # def __init__(
-    #     self,
-    #     index,
-    #     extractor="pacai.core.featureExtractors.IdentityExtractor",
-    #     **kwargs
-    # ):
-    #     super().__init__(index, **kwargs)
-    #     self.featExtractor = reflection.qualifiedImport(extractor)
-    #     # You might want to initialize weights here.
-    #     self.weights = {}
+    def getWeights(self):
+        return self.weights
 
-    # def final(self, state):
-    #     """
-    #     Called at the end of each game.
-    #     """
+    def getQValue(self, state, action):
+        # QLearningAgent.getQValue`:
+        # Should return `Q(state, action) = w * featureVector`,
+        # where `*` is the dotProduct operator.
 
-    #     # Call the super-class final method.
-    #     super().final(state)
+        features = self.featExtractor.getFeatures(self, state, action)
+        # print(features)
+        q_value = 0.0
 
-    #     # Did we finish training?
-    #     if self.episodesSoFar == self.numTraining:
-    #         # You might want to print your weights here for debugging.
-    #         # *** Your Code Here ***
-    #         print(self.weights)
-    #         return self.weights
-    #         # raise NotImplementedError()
+        # Do dot-product of two vector
+        for f in features.keys():
+            # print(f)
+            q_value += self.weights.get(f, 0.0) * features[f]
+        return q_value
 
-    # def getWeights(self):
-    #     return self.weights
-
-    # def getQValue(self, state, action):
-    #     # QLearningAgent.getQValue`:
-    #     # Should return `Q(state, action) = w * featureVector`,
-    #     # where `*` is the dotProduct operator.
-
-    #     print(inspect.signature(self.featExtractor.getFeatures))
-
-    #     features = self.featExtractor.getFeatures(state, action)
-    #     print(features)
-    #     q_value = 0.0
-    #     for f in features:
-    #         q_value += self.weights[f] * features[f]
-    #     return q_value
-
-    # def update(self, state, action, nextState, reward):
-    #     # Should update your weights based on transition.
-    #     f = self.featExtractor.getFeatures(state, action)
-    #     qmax = self.getValue(nextState)
-    #     q = self.getQValue(state, action)
-    #     for i in f.keys():
-    #         self.weights[i] += self.alpha * (reward + self.discount * qmax - q) * f[i]
-    #     return None
-
+    def update(self, state, action, next_state, reward):
+        # Should update your weights based on transition.
+        features = self.featExtractor.getFeatures(self, state, action)
+        next_value = self.getValue(next_state)
+        q_value = self.getQValue(state, action)
+        for f in features.keys():
+            if f not in self.weights:
+                self.weights[f] = 0.0
+            correction = (
+                _calc_new_val(reward, self.getDiscountRate(), next_value) - q_value
+            )
+            # Just follow the given formula
+            self.weights[f] += self.alpha * correction * features[f]
+        return None
